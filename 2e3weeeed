@@ -1,0 +1,93 @@
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Scanner;
+
+class LiquidityPool {
+    private BigDecimal usxPool;
+    private BigDecimal usdcPool;
+    private final BigDecimal fee = new BigDecimal("0.003"); // 0.3% swap fee
+
+    public LiquidityPool(BigDecimal usx, BigDecimal usdc) {
+        this.usxPool = usx;
+        this.usdcPool = usdc;
+    }
+
+    public BigDecimal swapUSXtoUSDC(BigDecimal amount) {
+        BigDecimal amountAfterFee = amount.subtract(amount.multiply(fee));
+        BigDecimal output = getOutputAmount(amountAfterFee, usxPool, usdcPool);
+
+        usxPool = usxPool.add(amountAfterFee);
+        usdcPool = usdcPool.subtract(output);
+
+        return output;
+    }
+
+    public BigDecimal swapUSDCtoUSX(BigDecimal amount) {
+        BigDecimal amountAfterFee = amount.subtract(amount.multiply(fee));
+        BigDecimal output = getOutputAmount(amountAfterFee, usdcPool, usxPool);
+
+        usdcPool = usdcPool.add(amountAfterFee);
+        usxPool = usxPool.subtract(output);
+
+        return output;
+    }
+
+    private BigDecimal getOutputAmount(BigDecimal input, BigDecimal inputPool, BigDecimal outputPool) {
+        // x * y = k AMM formula
+        BigDecimal k = inputPool.multiply(outputPool);
+        BigDecimal newInputPool = inputPool.add(input);
+
+        BigDecimal newOutputPool = k.divide(newInputPool, 18, RoundingMode.HALF_UP);
+        return outputPool.subtract(newOutputPool);
+    }
+
+    public void showPool() {
+        System.out.println("\n------- Liquidity Pool -------");
+        System.out.println("USX Pool : " + usxPool);
+        System.out.println("USDC Pool: " + usdcPool);
+        System.out.println("--------------------------------");
+    }
+}
+
+public class StablecoinDex {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        LiquidityPool pool = new LiquidityPool(
+            new BigDecimal("100000"), // initial USX
+            new BigDecimal("100000")  // initial USDC
+        );
+
+        System.out.println("Simple Stablecoin DEX — Swap USX <-> USDC");
+
+        while (true) {
+            pool.showPool();
+            System.out.println("\nChoose an option:");
+            System.out.println("[1] Swap USX → USDC");
+            System.out.println("[2] Swap USDC → USX");
+            System.out.println("[3] Exit");
+            System.out.print("> ");
+
+            String choice = scanner.nextLine();
+
+            if (choice.equals("3")) break;
+
+            System.out.print("Enter amount: ");
+            BigDecimal amount = new BigDecimal(scanner.nextLine());
+
+            if (choice.equals("1")) {
+                BigDecimal out = pool.swapUSXtoUSDC(amount);
+                System.out.println("You received " + out.setScale(6, RoundingMode.HALF_UP) + " USDC");
+            } 
+            else if (choice.equals("2")) {
+                BigDecimal out = pool.swapUSDCtoUSX(amount);
+                System.out.println("You received " + out.setScale(6, RoundingMode.HALF_UP) + " USX");
+            } 
+            else {
+                System.out.println("Invalid option.");
+            }
+        }
+
+        System.out.println("Goodbye!");
+    }
+}
